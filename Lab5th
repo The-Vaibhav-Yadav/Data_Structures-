@@ -1,0 +1,137 @@
+class Employee:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+        self.left = None
+        self.right = None
+
+class Operation:
+    def __init__(self, op_type, id, name=None):
+        self.op_type = op_type
+        self.id = id
+        self.name = name
+
+class EmployeeDataBase:
+    def __init__(self):
+        self.root = None
+        self.operations = []
+
+    def insert(self, id, name):
+        if not self.root:
+            self.root = Employee(id, name)
+        else:
+            self._insert(id, name, self.root)
+        self.operations.append(Operation('insert', id, name))
+
+    def _insert(self, id, name, cur_node):
+        if id < cur_node.id:
+            if cur_node.left is None:
+                cur_node.left = Employee(id, name)
+            else:
+                self._insert(id, name, cur_node.left)
+        elif id > cur_node.id:
+            if cur_node.right is None:
+                cur_node.right = Employee(id, name)
+            else:
+                self._insert(id, name, cur_node.right)
+        else:
+            print("ID already exists in database")
+
+    def find(self, id):
+        if self.root:
+            res = self._find(id, self.root)
+            if res:
+                return res.name
+            else:
+                return "Employee not found"
+        else:
+            return "No employees in database"
+
+    def _find(self, id, cur_node):
+        if id == cur_node.id:
+            return cur_node
+        elif id < cur_node.id and cur_node.left is not None:
+            return self._find(id, cur_node.left)
+        elif id > cur_node.id and cur_node.right is not None:
+            return self._find(id, cur_node.right)
+
+    def delete(self, id):
+        employee_name = self.find(id)
+        self.root = self._delete(self.root, id)
+        if employee_name != "Employee not found":
+            self.operations.append(Operation('delete', id, employee_name))
+
+    def _delete(self, cur_node, id):
+        if not cur_node:
+            return cur_node
+        if id < cur_node.id:
+            cur_node.left = self._delete(cur_node.left, id)
+        elif id > cur_node.id:
+            cur_node.right = self._delete(cur_node.right, id)
+        else:
+            if not cur_node.right:
+                return cur_node.left
+            if not cur_node.left:
+                return cur_node.right
+            temp_val = self._find_min(cur_node.right)
+            cur_node.id = temp_val.id
+            cur_node.name = temp_val.name
+            cur_node.right = self._delete(cur_node.right, temp_val.id)
+        return cur_node
+
+    def _find_min(self, cur_node):
+        current = cur_node
+        while current.left is not None:
+            current = current.left
+        return current
+
+    def print_db(self):
+        if self.root is not None:
+            self._print_db(self.root)
+
+    def _print_db(self, cur_node):
+        if cur_node is not None:
+            self._print_db(cur_node.left)
+            print(str(cur_node.id) + ', ' + str(cur_node.name))
+            self._print_db(cur_node.right)
+
+    def rollback(self):
+        if len(self.operations) == 0:
+            print("No operations to rollback.")
+            return
+        last_op = self.operations.pop()
+        if last_op.op_type == 'insert':
+            print(f"Rolling back last insert operation: {last_op.id}, {last_op.name}")
+            self.delete(last_op.id)
+        elif last_op.op_type == 'delete':
+            print(f"Rolling back last delete operation: {last_op.id}, {last_op.name}")
+            self.insert(last_op.id, last_op.name)
+
+
+db = EmployeeDataBase()
+
+while True:
+    print("\n1. Print all Employees")
+    print("2. Find Employee")
+    print("3. Add Employee")
+    print("4. Delete Employee")
+    print("5. Rollback")
+    print("6. Exit")
+    choice = int(input("Enter your choice: "))
+
+    if choice == 1:
+        db.print_db()
+    elif choice == 2:
+        id = int(input("Enter Employee ID: "))
+        print(db.find(id))
+    elif choice == 3:
+        id = int(input("Enter Employee ID: "))
+        name = input("Enter Employee Name: ")
+        db.insert(id, name)
+    elif choice == 4:
+        id = int(input("Enter Employee ID: "))
+        db.delete(id)
+    elif choice == 5:
+         db.rollback()
+    elif choice == 6:
+         break
